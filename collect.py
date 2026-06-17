@@ -19,6 +19,8 @@ All images end up under face_data/<subject_name>/, ready for train.py.
 
 import argparse
 import shutil
+import sys
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -136,19 +138,33 @@ def main():
 
     p_zip = sub.add_parser("zip", help="Import images from a celebrity dataset zip")
     p_zip.add_argument("path", help="Path to the zip file")
+    p_zip.add_argument("--no-train", action="store_true", help="Skip automatic gallery training")
 
     p_cam = sub.add_parser("webcam", help="Capture face images from your webcam")
     p_cam.add_argument("name", help="Subject name (folder will be created under face_data/)")
     p_cam.add_argument("--count", type=int, default=30, help="Number of samples to capture (default 30)")
     p_cam.add_argument("--camera", type=int, default=0, help="Camera index (default 0)")
+    p_cam.add_argument("--no-train", action="store_true", help="Skip automatic gallery training")
 
     args = parser.parse_args()
 
+    no_train = False
     if args.mode == "zip":
         import_zip(args.path)
+        no_train = args.no_train
     elif args.mode == "webcam":
         collect_webcam(args.name, args.count, args.camera)
+        no_train = args.no_train
+
+    if not no_train:
+        print("\nTriggering automatic gallery training...")
+        train_script = Path(__file__).parent / "train.py"
+        try:
+            subprocess.run([sys.executable, str(train_script)], check=True)
+        except Exception as e:
+            print(f"Failed to run automatic training: {e}")
 
 
 if __name__ == "__main__":
     main()
+    
